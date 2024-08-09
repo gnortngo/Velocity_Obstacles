@@ -11,6 +11,7 @@
 
   <depend>rclcpp</depend>
   <depend>visualization_msgs</depend>
+  <depend>rclcpp_components</depend>
 
   <!-- Only include if you are doing linting or testing -->
   <test_depend>ament_lint_auto</test_depend>

@@ -8,6 +8,12 @@ def generate_launch_description():
             executable='diskrobot',
             name='diskrobot',
             output='screen',
+            parameters=[{
+                'goal_x': 5.0,
+                'goal_y': 0.0,
+                'start_x': 0.0,
+                'start_y': 0.0
+            }]
         ),
         launch_ros.actions.Node(
             package='rviz2',
@@ -24,3 +30,4 @@ def generate_launch_description():
             arguments=['0', '0', '0', '0', '0', '0', 'map', 'base_link']
         ),
     ])
+

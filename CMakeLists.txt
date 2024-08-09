@@ -9,12 +9,17 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(visualization_msgs REQUIRED)
+find_package(rclcpp_components REQUIRED)
 
 # Declare the C++ executable
 add_executable(diskrobot src/diskrobot.cpp)
 
 # Specify libraries to link the executable target
-ament_target_dependencies(diskrobot rclcpp visualization_msgs)
+ament_target_dependencies(diskrobot
+  rclcpp
+  visualization_msgs
+  rclcpp_components
+)
 
 # Install targets
 install(TARGETS
