@@ -41,31 +41,18 @@ public:
 
 private:
     rclcpp::Node::OnSetParametersCallbackHandle::SharedPtr parameter_callback_handle_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_;
+    rclcpp::TimerBase::SharedPtr timer_;
+
+    double goal_x_;
+    double goal_y_;
+    double step_size_;
+    double current_x_;
+    double current_y_;
+    bool is_goal_set_;
 
     void visualize()
-    void timer_callback()
-
     {
-        // Tính khoảng cách còn lại đến điểm đích
-        double dx = goal_x_ - current_x_;
-        double dy = goal_y_ - current_y_;
-        double distance = std::sqrt(dx * dx + dy * dy);
-
-        // Nếu chưa đến đích, di chuyển robot
-        if (distance > step_size_)
-        {
-            // Tính toán góc và bước di chuyển
-            double angle = std::atan2(dy, dx);
-            current_x_ += step_size_ * std::cos(angle);
-            current_y_ += step_size_ * std::sin(angle);
-        }
-        else
-        {
-            // Đạt đến đích
-            current_x_ = goal_x_;
-            current_y_ = goal_y_;
-        }
-
         // Cập nhật marker
         auto marker = visualization_msgs::msg::Marker();
         marker.header.frame_id = "map";
@@ -89,7 +76,7 @@ private:
         marker.color.g = 0.0;
         marker.color.b = 1.0;
         publisher_->publish(marker);
-
+    }
 
     void move()
     {
@@ -149,21 +136,7 @@ private:
             }
         }
         return result;
-
-        // Log thông tin
-        RCLCPP_INFO(this->get_logger(), "Robot position: (%f, %f)", current_x_, current_y_);
-
     }
-
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_;
-    rclcpp::TimerBase::SharedPtr timer_;
-
-    double goal_x_;
-    double goal_y_;
-    double step_size_;
-    double current_x_;
-    double current_y_;
-    bool is_goal_set_;
 };
 
 int main(int argc, char *argv[])
