@@ -2,22 +2,20 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <cmath>
 #include <vector>
+#include "timer.h"
 
-// Class publisher marker
-class MarkerPublisher : public rclcpp::Node
-{
+// Class MarkerPublisher
+class MarkerPublisher {
 public:
-    MarkerPublisher()
-        : Node("marker_publisher")
-    {
-        publisher_ = this->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 10);
+    MarkerPublisher(rclcpp::Node::SharedPtr node)
+        : node_(node) {
+        publisher_ = node_->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 10);
     }
 
-    void publish_marker(double x, double y)
-    {
+    void publish_marker(double x, double y) {
         auto marker = visualization_msgs::msg::Marker();
         marker.header.frame_id = "map";
-        marker.header.stamp = this->get_clock()->now();
+        marker.header.stamp = node_->get_clock()->now();
         marker.ns = "robot_marker";
         marker.id = 0;
         marker.type = visualization_msgs::msg::Marker::CYLINDER;
@@ -41,21 +39,19 @@ public:
 
 private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_;
+    rclcpp::Node::SharedPtr node_;
 };
 
-// Class move robot 
-class RobotController : public rclcpp::Node
-{
+// Class RobotController
+class RobotController {
 public:
-    RobotController(const std::vector<std::pair<double, double>>& points)
-        : Node("robot_controller"), 
-          delta_t_(0.1), 
+    RobotController(const std::vector<std::pair<double, double>>& points, std::shared_ptr<MarkerPublisher> marker_publisher)
+        : delta_t_(0.1), 
           velocity_(0.8), 
           current_x_(0.0), 
           current_y_(0.0), 
           current_index_(0),
-          marker_publisher_(std::make_shared<MarkerPublisher>())
-    {
+          marker_publisher_(marker_publisher) {
         if (!points.empty()) {
             current_x_ = points[0].first;
             current_y_ = points[0].second;
@@ -63,24 +59,18 @@ public:
                 goal_points_.emplace_back(points[i].first, points[i].second);
             }
         }
+    }
 
-        timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(static_cast<int>(delta_t_ * 1000)),
-            std::bind(&RobotController::timer_callback, this)
-        );
-        RCLCPP_INFO(this->get_logger(), "Robot Controller Initialized");
+    void run() {
+        while (true) {
+            move();
+            marker_publisher_->publish_marker(current_x_, current_y_);
+            delay(1000);
+        }
     }
 
 private:
-    void timer_callback()
-    {
-        move();
-        marker_publisher_->publish_marker(current_x_, current_y_);
-        RCLCPP_INFO(this->get_logger(), "Robot position: (%f, %f)", current_x_, current_y_);
-    }
-
-    void move()
-    {
+    void move() {
         if (current_index_ >= goal_points_.size()) {
             return;
         }
@@ -90,19 +80,12 @@ private:
         double dy = goal.second - current_y_;
         double distance = std::sqrt(dx * dx + dy * dy);
 
-        if (distance > velocity_*delta_t_) // Một giá trị ngưỡng
-        {
+        if (distance > velocity_ * delta_t_) {
             double angle = std::atan2(dy, dx);
-
-            // Tính toán vận tốc trong x và y dựa trên vận tốc toàn phần
             double velocity_x = velocity_ * std::cos(angle);
             double velocity_y = velocity_ * std::sin(angle);
-
-            // Cập nhật vị trí dựa trên công thức x(t) = x(t-1) + v * delta_t
             current_x_ += velocity_x * delta_t_;
             current_y_ += velocity_y * delta_t_;
-
-            // Kiểm tra và điều chỉnh nếu robot vượt quá điểm mục tiêu
             double remaining_distance = std::sqrt(std::pow(goal.first - current_x_, 2) +
                                                   std::pow(goal.second - current_y_, 2));
             if (remaining_distance < velocity_ * delta_t_) {
@@ -110,29 +93,27 @@ private:
                 current_y_ = goal.second;
                 ++current_index_;
             }
-        }
-        else
-        {
+        } else {
             current_x_ = goal.first;
             current_y_ = goal.second;
             ++current_index_;
         }
     }
 
-    rclcpp::TimerBase::SharedPtr timer_;
     std::vector<std::pair<double, double>> goal_points_;
-    double delta_t_; // Thời gian giữa các lần gọi callback
-    double velocity_; // Vận tốc của robot
+    double delta_t_;
+    double velocity_;
     double current_x_;
     double current_y_;
     size_t current_index_;
     std::shared_ptr<MarkerPublisher> marker_publisher_;
 };
 
-
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     rclcpp::init(argc, argv);
+
+    auto node = std::make_shared<rclcpp::Node>("robot_controller_node");
+    auto marker_publisher = std::make_shared<MarkerPublisher>(node);
 
     std::vector<std::pair<double, double>> points = {
         {0.0, 0.0},
@@ -146,9 +127,9 @@ int main(int argc, char *argv[])
         {3.0, 0.0}
     };
 
-    auto node = std::make_shared<RobotController>(points);
+    auto robot_controller = std::make_shared<RobotController>(points, marker_publisher);
+    robot_controller->run();
 
-    rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;
 }

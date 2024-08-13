@@ -4,15 +4,19 @@
   <name>myrobot_cpp</name>
   <version>0.0.0</version>
   <description>Package for publishing a robot marker in RViz</description>
+
   <maintainer email="trong.gnortngo@gmail.com">gnort</maintainer>
+
   <license>Apache-2.0</license>
 
+  <!-- Build tool dependency -->
   <buildtool_depend>ament_cmake</buildtool_depend>
 
+  <!-- Package dependencies -->
   <depend>rclcpp</depend>
   <depend>visualization_msgs</depend>
 
-  <!-- Only include if you are doing linting or testing -->
+  <!-- Optional dependencies for testing and linting -->
   <test_depend>ament_lint_auto</test_depend>
   <test_depend>ament_lint_common</test_depend>
 
@@ -20,3 +24,4 @@
     <build_type>ament_cmake</build_type>
   </export>
 </package>
+

@@ -10,11 +10,23 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
+# Add timer library
+add_library(timer
+  timer/timer.cpp
+)
+target_include_directories(timer PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/timer>
+  $<INSTALL_INTERFACE:timer>
+)
+
 # Declare the C++ executable
 add_executable(diskrobot src/diskrobot.cpp)
 
 # Specify libraries to link the executable target
 ament_target_dependencies(diskrobot rclcpp visualization_msgs)
+
+# Link timer library with diskrobot
+target_link_libraries(diskrobot timer)
 
 # Install targets
 install(TARGETS
@@ -41,3 +53,4 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
+
