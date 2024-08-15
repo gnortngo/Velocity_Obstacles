@@ -5,22 +5,25 @@
 #include <fstream>
 #include <string>
 #include <memory> 
+#include <utility>
+#include <thread>
+#include <chrono>
 #include "timer.h"
 
 // Class RobotController
 class RobotController {
 public:
-    RobotController(const std::vector<std::pair<double, double>>& points)
-        : radius_(0.5), height_(0.1), delta_t_(0.1), velocity_(2), current_x_(0.0), current_y_(0.0), current_index_(0) {
-        if (!points.empty()) {
-            current_x_ = points[0].first;
-            current_y_ = points[0].second;
-            for (size_t i = 1; i < points.size(); ++i) {
-                goal_points_.emplace_back(points[i].first, points[i].second);
-            }
+    RobotController(double radius, double height, double delta_t, double velocity, double initial_x, double initial_y)
+        : radius_(radius), height_(height), delta_t_(delta_t), velocity_(velocity), current_x_(initial_x), current_y_(initial_y), current_index_(0) {}
+
+    void set_goal_points(const std::vector<std::pair<double, double>>& points) {
+        goal_points_ = points;
+        current_index_ = 0;
+        if (!goal_points_.empty()) {
+            current_x_ = goal_points_[0].first;
+            current_y_ = goal_points_[0].second;
         }
     }
-
     void move() {
         if (current_index_ >= goal_points_.size()) {
             return;
@@ -50,6 +53,7 @@ public:
             ++current_index_;
         }
     }
+
     double current_x() const { return current_x_; }
     double current_y() const { return current_y_; }
     double get_radius() const { return radius_; }
@@ -115,11 +119,13 @@ private:
 int main(int argc, char *argv[]) {
 
     rclcpp::init(argc, argv);
-
     auto node = std::make_shared<rclcpp::Node>("robot_controller_node");
 
-    auto robot_controller = std::make_shared<RobotController>(
-        std::vector<std::pair<double, double>>{
+    // Init
+    auto robot1 = std::make_shared<RobotController>(0.5, 0.1, 0.1, 0.8, 0.0, 0.0);
+    auto robot2 = std::make_shared<RobotController>(0.7, 0.2, 0.1, 0.6, 1.0, 1.0);
+
+    robot1->set_goal_points({         
             {0.0, 0.0},
             {0.0, 3.0},
             {3.0, 3.0},
@@ -128,18 +134,37 @@ int main(int argc, char *argv[]) {
             {0.0, 0.0},
             {0.0, 3.0},
             {3.0, 3.0},
-            {3.0, 0.0}
+            {3.0, 0.0} 
+        });
+
+    robot2->set_goal_points({         
+            {2.0, 0.0},
+            {1.0, 5.0},
+            {2.0, 3.0},
+            {3.0, 1.0},
+            {4.0, 0.0},
+            {1.0, 0.0},
+            {0.0, 0.0},
+            {5.0, 5.0},
+            {3.0, 3.0} 
+        });
+
+    auto marker_publisher1 = std::make_shared<MarkerPublisher>(node, robot1);
+    auto marker_publisher2 = std::make_shared<MarkerPublisher>(node, robot2);
+
+    auto control_robot = [](std::shared_ptr<RobotController> robot, std::shared_ptr<MarkerPublisher> publisher) {
+        while (rclcpp::ok()) {
+            robot->move();
+            publisher->publish_marker();
+            delay(100);
         }
-    );
+    };
 
-    auto marker_publisher = std::make_shared<MarkerPublisher>(node, robot_controller);
+    std::thread robot1_thread(control_robot, robot1, marker_publisher1);
+    std::thread robot2_thread(control_robot, robot2, marker_publisher2);
 
-    while (rclcpp::ok())
-    {
-        robot_controller->move();
-        marker_publisher->publish_marker();
-        delay(100);        
-    }
+    robot1_thread.join();
+    robot2_thread.join();
 
     rclcpp::shutdown();
     return 0;
