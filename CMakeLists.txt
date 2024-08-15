@@ -22,9 +22,11 @@ target_include_directories(timer PUBLIC
 # Declare the C++ executable
 add_executable(diskrobot src/diskrobot.cpp)
 
+add_executable(input_data src/input_data.cpp)
+
 # Specify libraries to link the executable target
 ament_target_dependencies(diskrobot rclcpp visualization_msgs)
-
+ament_target_dependencies(input_data rclcpp)
 # Link timer library with diskrobot
 target_link_libraries(diskrobot timer)
 
@@ -39,6 +41,9 @@ install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}/launch
 )
 
+# Install input file
+install(TARGETS input_data
+    DESTINATION lib/${PROJECT_NAME})
 # Add tests
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
