@@ -122,7 +122,7 @@ int main(int argc, char *argv[]) {
     auto node = std::make_shared<rclcpp::Node>("robot_controller_node");
 
     // Init
-    auto robot1 = std::make_shared<RobotController>(0.5, 0.1, 0.1, 0.8, 0.0, 0.0);
+    auto robot1 = std::make_shared<RobotController>(0.5, 0.1, 0.1, 0.8, 0.0, 0.0); // r h delta_t v x0 y0
     auto robot2 = std::make_shared<RobotController>(0.7, 0.2, 0.1, 0.6, 1.0, 1.0);
 
     robot1->set_goal_points({         
