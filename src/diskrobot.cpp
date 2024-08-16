@@ -13,8 +13,8 @@
 // Class RobotController
 class RobotController {
 public:
-    RobotController(double radius, double height, double delta_t, double velocity, double initial_x, double initial_y)
-        : radius_(radius), height_(height), delta_t_(delta_t), velocity_(velocity), current_x_(initial_x), current_y_(initial_y), current_index_(0) {}
+    RobotController(double radius, double height, double delta_t, double velocity, double initial_x, double initial_y, int robot_id)
+        : radius_(radius), height_(height), delta_t_(delta_t), velocity_(velocity), current_x_(initial_x), current_y_(initial_y), current_index_(0), robot_id_(robot_id) {}
 
     void set_goal_points(const std::vector<std::pair<double, double>>& points) {
         goal_points_ = points;
@@ -58,6 +58,18 @@ public:
     double current_y() const { return current_y_; }
     double get_radius() const { return radius_; }
     double get_height() const { return height_; }
+    int get_robot_id() const { return robot_id_; }
+
+    double get_direction_angle() const {
+        if (current_index_ >= goal_points_.size()) {
+            return 0.0;
+        }
+
+        auto& goal = goal_points_[current_index_];
+        double dx = goal.first - current_x_;
+        double dy = goal.second - current_y_;
+        return std::atan2(dy, dx);
+    }
 
 private:
     std::vector<std::pair<double, double>> goal_points_;
@@ -68,6 +80,7 @@ private:
     double current_x_;
     double current_y_;
     size_t current_index_;
+    int robot_id_;
 };
 
 // Class MarkerPublisher
@@ -83,7 +96,7 @@ public:
         marker.header.frame_id = "map";
         marker.header.stamp = node_->get_clock()->now();
         marker.ns = "robot_marker";
-        marker.id = 0;
+        marker.id = robot_controller_->get_robot_id(); 
         marker.type = visualization_msgs::msg::Marker::CYLINDER;
         marker.action = visualization_msgs::msg::Marker::ADD;
 
@@ -106,7 +119,40 @@ public:
         marker.color.r = 0.0;
         marker.color.g = 0.0;
         marker.color.b = 1.0;
+        marker.lifetime = rclcpp::Duration(0, 500000000); // 0.5 giây
+        //marker.lifetime = rclcpp::Duration(1, 0); 
+                // Marker for direction arrow
+       /* auto arrow_marker = visualization_msgs::msg::Marker();
+        arrow_marker.header.frame_id = "map";
+        arrow_marker.header.stamp = node_->get_clock()->now();
+        arrow_marker.ns = "robot_marker_arrow";
+        arrow_marker.id = robot_controller_->get_robot_id() + 1000;  // Ensure unique ID for arrow marker
+        arrow_marker.type = visualization_msgs::msg::Marker::ARROW;
+        arrow_marker.action = visualization_msgs::msg::Marker::ADD;
+
+        // Arrow position and orientation
+        arrow_marker.pose.position.x = x;
+        arrow_marker.pose.position.y = y;
+        arrow_marker.pose.position.z = height / 2;
+        double direction_angle = robot_controller_->get_direction_angle();
+        arrow_marker.pose.orientation.x = 0.0;
+        arrow_marker.pose.orientation.y = 0.0;
+        arrow_marker.pose.orientation.z = sin(direction_angle / 2);
+        arrow_marker.pose.orientation.w = cos(direction_angle / 2);
+
+        // Arrow size
+        arrow_marker.scale.x = 0.6; // Arrow length
+        arrow_marker.scale.y = 0.06; // Arrow width
+        arrow_marker.scale.z = 0.06; // Arrow height
+
+        arrow_marker.color.a = 1.0;
+        arrow_marker.color.r = 1.0;
+        arrow_marker.color.g = 0.0;
+        arrow_marker.color.b = 0.0;
+        //arrow_marker.lifetime = rclcpp::Duration(0, 100000000); // 0.1 giây
+*/
         publisher_->publish(marker);
+        //publisher_->publish(arrow_marker);
     }
 
 private:
@@ -122,9 +168,9 @@ int main(int argc, char *argv[]) {
     auto node = std::make_shared<rclcpp::Node>("robot_controller_node");
 
     // Init
-    auto robot1 = std::make_shared<RobotController>(0.5, 0.1, 0.1, 0.8, 0.0, 0.0); // r h delta_t v x0 y0
-    auto robot2 = std::make_shared<RobotController>(0.7, 0.2, 0.1, 0.6, 1.0, 1.0);
-
+    auto robot1 = std::make_shared<RobotController>(0.5, 0.1, 0.1, 0.8, 0.0, 0.0, 1); // r h delta_t v x0 y0 id
+    auto robot2 = std::make_shared<RobotController>(0.7, 0.2, 0.1, 0.6, 1.0, 1.0, 2);
+    auto robot3 = std::make_shared<RobotController>(0.4, 0.1, 0.1, 1.0, 1.0, 1.0, 3);
     robot1->set_goal_points({         
             {0.0, 0.0},
             {0.0, 3.0},
@@ -148,11 +194,22 @@ int main(int argc, char *argv[]) {
             {5.0, 5.0},
             {3.0, 3.0} 
         });
+    robot3->set_goal_points({         
+            {5.0, 5.0},
+            {0.0, 5.0},
+            {4.0, 3.0},
+            {0.0, 0.0},
+            {1.0, 1.7},
+            {1.0, 4.0},
+            {0.0, 3.0},
+            {4.0, 5.0},
+            {1.0, 3.0} 
+        });
 
     auto marker_publisher1 = std::make_shared<MarkerPublisher>(node, robot1);
     auto marker_publisher2 = std::make_shared<MarkerPublisher>(node, robot2);
-
-    auto control_robot = [](std::shared_ptr<RobotController> robot, std::shared_ptr<MarkerPublisher> publisher) {
+    auto marker_publisher3 = std::make_shared<MarkerPublisher>(node, robot3);
+   /* auto control_robot = [](std::shared_ptr<RobotController> robot, std::shared_ptr<MarkerPublisher> publisher) {
         while (rclcpp::ok()) {
             robot->move();
             publisher->publish_marker();
@@ -164,7 +221,19 @@ int main(int argc, char *argv[]) {
     std::thread robot2_thread(control_robot, robot2, marker_publisher2);
 
     robot1_thread.join();
-    robot2_thread.join();
+    robot2_thread.join();*/
+    // Main loop
+    rclcpp::WallRate loop_rate(10); // 10 Hz loop rate
+    while (rclcpp::ok()) {
+        robot1->move();
+        robot2->move();
+        robot3->move();
+        marker_publisher1->publish_marker();
+        marker_publisher2->publish_marker();
+        marker_publisher3->publish_marker();
+
+        loop_rate.sleep();
+    }
 
     rclcpp::shutdown();
     return 0;
