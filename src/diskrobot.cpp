@@ -89,6 +89,7 @@ public:
     MarkerPublisher(rclcpp::Node::SharedPtr node, std::shared_ptr<RobotController> robot_controller)
     : node_(node), robot_controller_(robot_controller) {
     publisher_ = node_->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 10);
+    arrow_publisher_ = node_->create_publisher<visualization_msgs::msg::Marker>("arrow_marker", 10);
     }
 
     void publish_marker() {
@@ -119,10 +120,12 @@ public:
         marker.color.r = 0.0;
         marker.color.g = 0.0;
         marker.color.b = 1.0;
-        marker.lifetime = rclcpp::Duration(0, 500000000); // 0.5 giây
-        //marker.lifetime = rclcpp::Duration(1, 0); 
+        //marker.lifetime = rclcpp::Duration(0, 500000000); // 0.5 giây
+        marker.lifetime = rclcpp::Duration(1, 0); 
+        publisher_->publish(marker);
+        
                 // Marker for direction arrow
-       /* auto arrow_marker = visualization_msgs::msg::Marker();
+        auto arrow_marker = visualization_msgs::msg::Marker();
         arrow_marker.header.frame_id = "map";
         arrow_marker.header.stamp = node_->get_clock()->now();
         arrow_marker.ns = "robot_marker_arrow";
@@ -134,6 +137,7 @@ public:
         arrow_marker.pose.position.x = x;
         arrow_marker.pose.position.y = y;
         arrow_marker.pose.position.z = height / 2;
+        
         double direction_angle = robot_controller_->get_direction_angle();
         arrow_marker.pose.orientation.x = 0.0;
         arrow_marker.pose.orientation.y = 0.0;
@@ -150,13 +154,14 @@ public:
         arrow_marker.color.g = 0.0;
         arrow_marker.color.b = 0.0;
         //arrow_marker.lifetime = rclcpp::Duration(0, 100000000); // 0.1 giây
-*/
-        publisher_->publish(marker);
-        //publisher_->publish(arrow_marker);
+
+        
+        arrow_publisher_->publish(arrow_marker);
     }
 
 private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr arrow_publisher_; // Publisher cho arrow marker
     rclcpp::Node::SharedPtr node_;
     std::shared_ptr<RobotController> robot_controller_;
     
@@ -168,47 +173,77 @@ int main(int argc, char *argv[]) {
     auto node = std::make_shared<rclcpp::Node>("robot_controller_node");
 
     // Init
-    auto robot1 = std::make_shared<RobotController>(0.5, 0.1, 0.1, 0.8, 0.0, 0.0, 1); // r h delta_t v x0 y0 id
-    auto robot2 = std::make_shared<RobotController>(0.7, 0.2, 0.1, 0.6, 1.0, 1.0, 2);
-    auto robot3 = std::make_shared<RobotController>(0.4, 0.1, 0.1, 1.0, 1.0, 1.0, 3);
+    auto robot1 = std::make_shared<RobotController>(0.4, 0.1, 0.1, 1.0, 0.0, 0.0, 1); // r h delta_t v x0 y0 id
+    auto robot2 = std::make_shared<RobotController>(0.4, 0.1, 0.1, 0.8, 1.0, 1.0, 2);
+    auto robot3 = std::make_shared<RobotController>(0.4, 0.1, 0.1, 0.6, 1.0, 1.0, 3);
+    auto robot4 = std::make_shared<RobotController>(0.4, 0.1, 0.1, 0.4, 1.0, 1.0, 4);
+    auto robot5 = std::make_shared<RobotController>(0.4, 0.1, 0.1, 0.2, 1.0, 1.0, 5);
     robot1->set_goal_points({         
-            {0.0, 0.0},
-            {0.0, 3.0},
-            {3.0, 3.0},
-            {3.0, 0.0},
-            {0.0, 0.0},
-            {0.0, 0.0},
-            {0.0, 3.0},
-            {3.0, 3.0},
-            {3.0, 0.0} 
+            {5.00, 0.00}, 
+            {4.05, 2.94}, 
+            {1.54, 4.75}, 
+            {-1.54, 4.75}, 
+            {-4.05, 2.94}, 
+            {-5.00, 0.00}, 
+            {-4.05, -2.94}, 
+            {-1.54, -4.75}, 
+            {1.54, -4.75}, 
+            {4.05, -2.94}
         });
 
     robot2->set_goal_points({         
-            {2.0, 0.0},
-            {1.0, 5.0},
-            {2.0, 3.0},
-            {3.0, 1.0},
-            {4.0, 0.0},
-            {1.0, 0.0},
-            {0.0, 0.0},
-            {5.0, 5.0},
-            {3.0, 3.0} 
+            {4.00, 0.00}, 
+            {3.24, 2.35}, 
+            {1.23, 3.80}, 
+            {-1.23, 3.80}, 
+            {-3.24, 2.35}, 
+            {-4.00, 0.00}, 
+            {-3.24, -2.35}, 
+            {-1.23, -3.80}, 
+            {1.23, -3.80}, 
+            {3.24, -2.35}
         });
     robot3->set_goal_points({         
-            {5.0, 5.0},
-            {0.0, 5.0},
-            {4.0, 3.0},
-            {0.0, 0.0},
-            {1.0, 1.7},
-            {1.0, 4.0},
-            {0.0, 3.0},
-            {4.0, 5.0},
-            {1.0, 3.0} 
+            {3.00, 0.00}, 
+            {2.43, 1.76}, 
+            {0.92, 2.85}, 
+            {-0.92, 2.85}, 
+            {-2.43, 1.76}, 
+            {-3.00, 0.00}, 
+            {-2.43, -1.76}, 
+            {-0.92, -2.85}, 
+            {0.92, -2.85}, 
+            {2.43, -1.76}
         });
-
+    robot4->set_goal_points({         
+            {2.00, 0.00}, 
+            {1.62, 1.17}, 
+            {0.61, 1.90}, 
+            {-0.61, 1.90}, 
+            {-1.62, 1.17}, 
+            {-2.00, 0.00}, 
+            {-1.62, -1.17}, 
+            {-0.61, -1.90}, 
+            {0.61, -1.90}, 
+            {1.62, -1.17}
+        });
+    robot5->set_goal_points({         
+            {1.00, 0.00}, 
+            {0.81, 0.59}, 
+            {0.31, 0.95}, 
+            {-0.31, 0.95}, 
+            {-0.81, 0.59}, 
+            {-1.00, 0.00}, 
+            {-0.81, -0.59}, 
+            {-0.31, -0.95}, 
+            {0.31, -0.95}, 
+            {0.81, -0.59}
+        });
     auto marker_publisher1 = std::make_shared<MarkerPublisher>(node, robot1);
     auto marker_publisher2 = std::make_shared<MarkerPublisher>(node, robot2);
     auto marker_publisher3 = std::make_shared<MarkerPublisher>(node, robot3);
+    auto marker_publisher4 = std::make_shared<MarkerPublisher>(node, robot4);
+    auto marker_publisher5 = std::make_shared<MarkerPublisher>(node, robot5);
    /* auto control_robot = [](std::shared_ptr<RobotController> robot, std::shared_ptr<MarkerPublisher> publisher) {
         while (rclcpp::ok()) {
             robot->move();
@@ -223,14 +258,18 @@ int main(int argc, char *argv[]) {
     robot1_thread.join();
     robot2_thread.join();*/
     // Main loop
-    rclcpp::WallRate loop_rate(10); // 10 Hz loop rate
+    rclcpp::WallRate loop_rate(5); // 10 Hz loop rate
     while (rclcpp::ok()) {
         robot1->move();
         robot2->move();
         robot3->move();
+        robot4->move();
+        robot5->move();
         marker_publisher1->publish_marker();
         marker_publisher2->publish_marker();
         marker_publisher3->publish_marker();
+        marker_publisher4->publish_marker();
+        marker_publisher5->publish_marker();
 
         loop_rate.sleep();
     }
