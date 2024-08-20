@@ -1,4 +1,5 @@
 #include <rclcpp/rclcpp.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <cmath>
 #include <vector>
@@ -88,11 +89,11 @@ class MarkerPublisher {
 public:
     MarkerPublisher(rclcpp::Node::SharedPtr node, std::shared_ptr<RobotController> robot_controller)
     : node_(node), robot_controller_(robot_controller) {
-    publisher_ = node_->create_publisher<visualization_msgs::msg::Marker>("visualization_marker", 10);
-    arrow_publisher_ = node_->create_publisher<visualization_msgs::msg::Marker>("arrow_marker", 10);
+    publisher_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>("visualization_marker_array", 100);
     }
 
     void publish_marker() {
+        auto marker_array = visualization_msgs::msg::MarkerArray();
         auto marker = visualization_msgs::msg::Marker();
         marker.header.frame_id = "map";
         marker.header.stamp = node_->get_clock()->now();
@@ -113,21 +114,20 @@ public:
         marker.pose.orientation.y = 0.0;
         marker.pose.orientation.z = 0.0;
         marker.pose.orientation.w = 1.0;
-        marker.scale.x = radius;//0.5;
-        marker.scale.y = radius;//0.5;
-        marker.scale.z = height;//0.1;
+        marker.scale.x = radius;
+        marker.scale.y = radius;
+        marker.scale.z = height;
         marker.color.a = 1.0;
         marker.color.r = 0.0;
         marker.color.g = 0.0;
         marker.color.b = 1.0;
-        //marker.lifetime = rclcpp::Duration(0, 500000000); // 0.5 giây
         marker.lifetime = rclcpp::Duration(1, 0); 
-        publisher_->publish(marker);
+         marker_array.markers.push_back(marker);
         
                 // Marker for direction arrow
         auto arrow_marker = visualization_msgs::msg::Marker();
         arrow_marker.header.frame_id = "map";
-        arrow_marker.header.stamp = node_->get_clock()->now();
+        arrow_marker.header.stamp = marker.header.stamp;
         arrow_marker.ns = "robot_marker_arrow";
         arrow_marker.id = robot_controller_->get_robot_id() + 1000;  // Ensure unique ID for arrow marker
         arrow_marker.type = visualization_msgs::msg::Marker::ARROW;
@@ -153,15 +153,13 @@ public:
         arrow_marker.color.r = 1.0;
         arrow_marker.color.g = 0.0;
         arrow_marker.color.b = 0.0;
-        //arrow_marker.lifetime = rclcpp::Duration(0, 100000000); // 0.1 giây
+        marker_array.markers.push_back(arrow_marker);
 
-        
-        arrow_publisher_->publish(arrow_marker);
+        publisher_->publish(marker_array);
     }
 
 private:
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr publisher_;
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr arrow_publisher_; // Publisher cho arrow marker
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
     rclcpp::Node::SharedPtr node_;
     std::shared_ptr<RobotController> robot_controller_;
     
@@ -244,19 +242,6 @@ int main(int argc, char *argv[]) {
     auto marker_publisher3 = std::make_shared<MarkerPublisher>(node, robot3);
     auto marker_publisher4 = std::make_shared<MarkerPublisher>(node, robot4);
     auto marker_publisher5 = std::make_shared<MarkerPublisher>(node, robot5);
-   /* auto control_robot = [](std::shared_ptr<RobotController> robot, std::shared_ptr<MarkerPublisher> publisher) {
-        while (rclcpp::ok()) {
-            robot->move();
-            publisher->publish_marker();
-            delay(100);
-        }
-    };
-
-    std::thread robot1_thread(control_robot, robot1, marker_publisher1);
-    std::thread robot2_thread(control_robot, robot2, marker_publisher2);
-
-    robot1_thread.join();
-    robot2_thread.join();*/
     // Main loop
     rclcpp::WallRate loop_rate(5); // 10 Hz loop rate
     while (rclcpp::ok()) {
